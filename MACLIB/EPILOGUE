@@ -1,0 +1,9 @@
+         MACRO
+         EPILOGUE &RETCODE=0
+         LR    1,13
+         L     13,4(13)
+         STORAGE RELEASE,LENGTH=72,ADDR=(1)
+         LM    14,12,12(13)
+         LA    15,&RETCODE
+         BR    14
+         MEND

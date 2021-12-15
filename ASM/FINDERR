@@ -1,0 +1,108 @@
+         YREGS ,
+
+FINDERR  CSECT ,
+FINDERR  AMODE 31
+FINDERR  RMODE 24
+         PROLOGUE R12
+
+         L     R1,0(,R1)     R1 -> PLEN ARGS
+         LA    R3,2(,R1)     R3 -> ARGS
+         XR    R4,R4         R4 = PLEN - 1
+         LH    R4,0(,R1)      .
+         BCTR  R4,0           .
+         STRTOINT R5,R3,R4   R5 = N
+
+         STORAGE OBTAIN,LENGTH=VARSLENG,ADDR=(R11)
+         USING VARS,R11
+         SLL   R5,2
+
+         STORAGE OBTAIN,LENGTH=(R5),ADDR=(R3)
+         ST    R3,ECBS
+         STORAGE OBTAIN,LENGTH=(R5),ADDR=(R3)
+         ST    R3,ECBAS
+         STORAGE OBTAIN,LENGTH=(R5),ADDR=(R3)
+         ST    R3,TCBAS
+         SRL   R5,2
+         WTO   'MAIN'
+
+         LR    R4,R5
+         L     R3,ECBS
+         L     R2,ECBAS
+         L     R6,TCBAS
+CALLLOOP EQU   *
+         XC    0(4,R3),0(R3)
+         ST    R3,0(,R2)
+         CHI   R4,X'02'
+         BE    RUNBAD
+         ATTACH EP=ERRTEST,PARAM=(GOOD),ECB=(R3)
+         B     CONTINUE
+RUNBAD   EQU   *
+         ATTACH EP=ERRTEST,PARAM=(BAD),ECB=(R3)
+CONTINUE EQU   *
+         ST    R1,0(,R6)
+         WTO   'ATTACHED'
+         LA    R3,4(,R3)
+         LA    R2,4(,R2)
+         LA    R6,4(,R6)
+         BCT   R4,CALLLOOP
+         AHI   R2,-4
+         OI    0(R2),X'80'
+         WTO   'SUBPROGRAMS RUNNING'
+
+         L     R10,ECBAS
+         WAIT  1,ECBLIST=0(,R10)
+
+         WTO   'CHECKING'
+         LR    R4,R5
+         L     R6,TCBAS
+CHCKLOOP EQU   *
+         L     R3,0(,R6)
+         LLGF  R2,16(,R3)
+         N     R2,PATTERN
+         SRL   R2,12
+         LTR   R2,R2
+         BNZ   COMPLAIN
+         WTO   'OK'
+         B     CONT1
+COMPLAIN EQU   *
+         WTO   'NOK'
+CONT1    EQU   *
+         DETACH 0(,R6)
+         LA    R6,4(,R6)
+         BCT   R4,CHCKLOOP
+         WTO   'DETACHED'
+
+         L     R3,ECBS
+         STORAGE OBTAIN,LENGTH=(R5),ADDR=(R3)
+         L     R3,ECBAS
+         STORAGE OBTAIN,LENGTH=(R5),ADDR=(R3)
+         L     R3,TCBAS
+         STORAGE OBTAIN,LENGTH=(R5),ADDR=(R3)
+         STORAGE RELEASE,LENGTH=VARSLENG,ADDR=(R11)
+         EPILOGUE
+
+         DS    0F
+PATTERN  DC    X'00FFF000'
+GOOD     DC    X'00000001'
+BAD      DC    X'00000000'
+
+VARS     DSECT ,
+ECBS     DS    A
+ECBAS    DS    A
+TCBAS    DS    A
+VARSLENG EQU   *-VARS
+
+ERRTEST  CSECT ,
+ERRTEST  AMODE 31
+ERRTEST  RMODE 24
+         PROLOGUE R12
+         L     R1,0(,R1)
+         L     R1,0(,R1)
+         LTR   R1,R1
+         BNZ   OK
+         WTO   'OH, NO!'
+         DS    H
+OK       EQU   *
+         EPILOGUE
+
+         END   FINDERR
